@@ -1,0 +1,77 @@
+---
+- name: Create a Compute Engine instance
+  hosts: localhost
+  vars:
+    project_id: norse-fiber-440714-r4
+    zone: us-central1-f
+    credentials_file: ../credentials/norse-fiber-440714-r4-730a39269897.json
+    instance_name: jenkins-instance
+    machine_type: n1-standard-2
+    disk_name: disk-instance
+    disk_size_gb: 50
+    network_name: default
+    source_image: projects/ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20230727
+    ssh_pub_key_file: ../ssh_keys/jenkins_key.pub
+
+  tasks:
+    - name: Read SSH public key
+      ansible.builtin.slurp:
+        src: "{{ ssh_pub_key_file }}"
+      register: ssh_pub_key
+
+    - name: create a disk
+      gcp_compute_disk:
+        name: "{{ disk_name }}"
+        size_gb: "{{ disk_size_gb }}"
+        source_image: "{{ source_image }}"
+        zone: "{{ zone }}"
+        project: "{{ project_id }}"
+        auth_kind: serviceaccount
+        service_account_file: "{{ credentials_file }}"
+        state: present
+      register: disk
+
+    - name: Start an instance
+      gcp_compute_instance:
+        name: "{{ instance_name }}"
+        machine_type: "{{ machine_type }}"
+        zone: "{{ zone }}"
+        project: "{{ project_id }}"
+        auth_kind: serviceaccount
+        service_account_file: "{{ credentials_file }}"
+        metadata:
+          ssh-keys: "jenkins:{{ ssh_pub_key['content'] | b64decode }}"
+        disks:
+          - auto_delete: 'true'
+            boot: 'true'
+            source: "{{ disk }}"
+          - auto_delete: 'true'
+            interface: NVME
+            type: SCRATCH
+            initialize_params:
+              disk_type: local-ssd
+        network_interfaces:
+          - network:
+              selfLink: "global/networks/{{ network_name }}"
+            access_configs:
+              - name: External NAT
+                type: ONE_TO_ONE_NAT
+        state: present
+
+    - name: Create inbound firewall rule for port 8080 and 50000
+      gcp_compute_firewall:
+        name: allow-port-8080-50000
+        network:
+          selfLink: "global/networks/{{ network_name }}"
+        allowed:
+          - ip_protocol: TCP
+            ports:
+              - 8080
+              - 50000
+        source_ranges:
+          - 0.0.0.0/0
+        direction: INGRESS
+        description: Allow incoming traffic on port 50000 and 8080 (Jenkins UI)
+        project: "{{ project_id }}"
+        auth_kind: serviceaccount
+        service_account_file: "{{ credentials_file }}"

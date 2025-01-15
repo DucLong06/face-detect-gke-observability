@@ -1,0 +1,26 @@
+## https://medium.com/@blackhorseya/deploying-opentelemetry-and-jaeger-with-helm-on-kubernetes-d86cc8ba0332
+namespace: tracing 
+
+provisionDataStore:
+  cassandra: false
+  elasticsearch: false
+  kafka: false 
+
+elasticsearch:
+  enabled: false 
+kafka:
+  enabled: false 
+
+storage:
+  type: memory
+
+allInOne:
+  enabled: false
+
+agent:
+  enabled: true
+collector:
+  enabled: true
+query:
+  enabled: true
+
