@@ -19,7 +19,7 @@ pipeline {
                     // Build a temporary test image
                     sh '''
                         docker build -t test-image -f Dockerfile .
-                        docker run --rm test-image bash -c "cd /app/api && pytest -v"
+                        docker run --rm test-image bash -c "cd /app/api/test && pytest -v"
                         docker rmi test-image
                     '''
                 }
