@@ -41,6 +41,14 @@ app.add_middleware(
 # Get configuration from environment variables
 OTLP_GRPC_ENDPOINT = os.environ.get("OTLP_GRPC_ENDPOINT", "jaeger-jaeger.tracing.svc.cluster.local:4317")
 
+@app.get("/debug")
+async def debug_info():
+    system_info = {
+        "environment": os.environ.dict(),
+        "host": socket.gethostname(),
+        "ip": socket.gethostbyname(socket.gethostname())
+    }
+    return system_info
 
 def setting_jaeger(app: ASGIApp, log_correlation: bool = True) -> None:
     try:
